@@ -1,32 +1,60 @@
 version: '3.1'
 
 services:
-  # Service 1 = server web 
-  wordpress:
-    image: wordpress
+
+  # Service 1 = Site web client commande
+  ui_client:
+    image: nginx
     restart: always
     ports:
       - 8080:80
-    environment:
-      WORDPRESS_DB_HOST: db
-      WORDPRESS_DB_USER: exampleuser
-      WORDPRESS_DB_PASSWORD: examplepass
-      WORDPRESS_DB_NAME: exampledb
-    volumes:
-      - wordpress:/var/www/html
-      
-# Base de donnée wordpress        
-  db:
-    image: mysql:5.7
+  # Service 2 = server web interface gestion livreur 
+  ui_admin:
+    image: nginx
+    restart: always
+    ports:
+      - 10001:80
+# Base de donnée + interface gestion base de données
+# Base de donnée brute
+mongo:
+    image: mongo
     restart: always
     environment:
-      MYSQL_DATABASE: exampledb
-      MYSQL_USER: exampleuser
-      MYSQL_PASSWORD: examplepass
-      MYSQL_RANDOM_ROOT_PASSWORD: '1'
-    volumes:
-      - db:/var/lib/mysql
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+# Interface base de donnée
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: root
+      ME_CONFIG_MONGODB_URL: mongodb://root:root@mongo:27017/
 
-volumes:
-  wordpress:
-  db:
+# API
+API:
+    image: node
+    restart: always
+    ports:
+      - 1414:80
+      
+# Supervision Cadvisor
+cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+    - 1515:8080
+    volumes:
+    - /:/rootfs:ro
+    - /var/run:/var/run:rw
+    - /sys:/sys:ro
+    - /var/lib/docker/:/var/lib/docker:ro
+    depends_on:
+    - redis
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+    - 6379:6379
